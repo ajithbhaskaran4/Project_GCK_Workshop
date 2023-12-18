@@ -1,8 +1,5 @@
 import streamlit as st
-from BackEnd.Image2PointCloud import Image2PointCloud, CNN_Prediction
-from stpyvista import stpyvista
-import pyvista as pv
-import  streamlit_vertical_slider  as svs
+from BackEnd.Image2PointCloud import CNN_Prediction, Image2PointCloud
 from PIL import Image
 import numpy as np
 import tempfile
@@ -10,23 +7,13 @@ import base64
 import os
 import io
 
-pv.set_jupyter_backend('static')
-
-pv.start_xvfb()
 
 st.set_page_config(layout="wide")
 
 @st.cache_resource
 def getBrainImage():
-    return Image.open(r"BackEnd/Brain_Image.jpeg")
+    return Image.open(r"BackEnd/college_Image.jpg")
     
-@st.cache_resource    
-def getBrainGIF():
-    file = open(r"BackEnd/Brain_GIF.gif", 'rb')
-    contents = file.read()
-    data_url = base64.b64encode(contents).decode('utf-8-sig')
-    file.close()
-    return data_url
     
 def prevButton():
     if not (st.session_state.sliderPos == 1):
@@ -36,9 +23,6 @@ def nextButton():
     if not (st.session_state.sliderPos >= st.session_state.NumImages):
         st.session_state.sliderPos = st.session_state.sliderPos +1
 
-# ipythreejs does not support scalar bars :(
-pv.global_theme.show_scalar_bar = False
-
 if 'flag' not in st.session_state:
     st.session_state.flag = False
     
@@ -47,18 +31,14 @@ if 'CNN' not in st.session_state:
 
 if 'sliderPos' not in st.session_state:
     st.session_state.sliderPos = 1
-    
+
 if 'backend' not in st.session_state:
     st.session_state.backend = Image2PointCloud()
 
 st.title("MRI CYST ANALYSIS")
-BrainImage, BrainGIF = st.columns([3,1])
-with BrainImage:
-    st.image(getBrainImage())
 
-with BrainGIF:
-    data_url = getBrainGIF()
-    st.markdown(f'<img src="data:image/gif;base64,{data_url}">',unsafe_allow_html = True)
+st.image(getBrainImage())
+
 st.text("An Application to view and quantify the presence of cyst from MRI")
 
 
@@ -84,20 +64,13 @@ if uploaded_files:
 
 
 if st.button('Submit'):
-    st.session_state.backend.read_mri_images()
-    #st.session_state.pointCloud = st.session_state.backend.convert2PointCloud()
-    #st.session_state.NumImages = backend.getnumberofImages()
-    #st.session_state.ImageStack = backend.get_StackMRI()
     
-    #if 'pointCloud' not in st.session_state:
-    st.session_state.pointCloud = st.session_state.backend.convert2PointCloud()
-    #if 'NumImages' not in st.session_state:
+    st.session_state.backend.read_mri_images()
     st.session_state.NumImages = st.session_state.backend.getnumberofImages()
     #if 'ImageStack' not in st.session_state:
-    st.session_state.ImageStack = st.session_state.backend.get_StackMRI() 
+    st.session_state.ImageStack = st.session_state.backend.get_StackMRI()
     #if 'prediction' not in st.session_state:
     st.session_state.prediction = st.session_state.CNN.predictCNN(st.session_state.ImageStack)
-    st.session_state.cystCloud = st.session_state.CNN.getCystPointCloud()
        
     print("received all data")
     st.session_state.flag = True
@@ -131,25 +104,5 @@ if st.session_state.flag == True:
         BLayer[cystPos] = 0
         currentPred = Image.fromarray(mriImage, mode = 'RGB')
         st.image(currentPred)
-    
-    if (st.session_state.NumImages > 1):
-        pointCol, intermediate, MRICol = st.columns([3, 1,3])
-        with pointCol:
-            st.subheader("3D MRI View")
-            plotter = pv.Plotter(window_size=[600,600])
-            plotter.add_points(st.session_state.pointCloud, opacity = 0.5, cmap= 'bone') #, opacity = pointCloud['transparency']
-            plotter.add_points(st.session_state.cystCloud)
-            plotter.add_scalar_bar()
-            plotter.view_isometric()
-            plotter.background_color = 'white'
-            stpyvista(plotter, key="MRI")
-            
-        with MRICol:
-            st.subheader("3D Cyst View")
-            plotterCyst = pv.Plotter(window_size=[600,600])
-            plotterCyst.add_points(st.session_state.cystCloud)
-            plotterCyst.add_scalar_bar()
-            plotterCyst.view_isometric()
-            plotterCyst.background_color = 'white'
-            stpyvista(plotterCyst, key="MRI_Cyst")
+   
             
